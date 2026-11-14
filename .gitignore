@@ -1,0 +1,22 @@
+# Build output
+build/
+*.o
+*.d
+*.elf
+*.bin
+*.hex
+*.map
+
+# Editor files
+*.swp
+*.swo
+*~
+.vscode/
+
+# Debugging
+*.log
+.gdb_history
+
+# OS files
+.DS_Store
+Thumbs.db
