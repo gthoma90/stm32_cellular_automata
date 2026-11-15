@@ -150,14 +150,16 @@ ButtonPress button_press(void) {
 }
 
 EncoderSpeed encoder_speed(void) {
+    EncoderSpeed speed = ENCODER_SLOW;
     uint32_t raw_encoder_tick = systick_millis();
     uint16_t raw_encoder_count = encoder_count();
-    if (raw_encoder_count != recent_count) {
+    int16_t count_gap = raw_encoder_count - recent_count;
+    if (count_gap >= 4 || count_gap <= -4) {
         if (raw_encoder_tick - recent_tick < 100) {
-            return ENCODER_FAST;
+            speed = ENCODER_FAST;
         }
         recent_count = raw_encoder_count;
         recent_tick = raw_encoder_tick;
     }
-    return ENCODER_SLOW;
+    return speed;
 }
