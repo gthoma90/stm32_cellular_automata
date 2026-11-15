@@ -49,14 +49,16 @@ void i2c1_init(void) {
     I2C1->CR2 &= ~I2C_CR2_FREQ;
     I2C1->CR2 |= 8;
 
-    // Standard Mode: 100 kHz SCL
-    // CCR = 8 MHz / (2 * 100 kHz) = 40
-    I2C1->CCR = 40;
+    // Fast Mode: approximately 381 kHz SCL
+    // CCR = 8 MHz / (3 * 400 kHz) = 6.67
+    // Round up to 7 to stay below 400 kHz
+    // FS = 1, DUTY = 0 (2:1)
+    I2C1->CCR = I2C_CCR_FS | 7;
 
-    // Maximum rise time = 1000 ns
+    // Maximum rise time = 300 ns
     // PCLK1 period = 125 ns
-    // TRISE = (1000 / 125) + 1 = 9
-    I2C1->TRISE = 9;
+    // TRISE = floor(300 / 125 + 1) = 3
+    I2C1->TRISE = 3;
 
     // Enable I2C1 peripheral
     I2C1->CR1 |= I2C_CR1_PE;
@@ -128,7 +130,7 @@ void i2c1_stop(void) {
     // do i need to add this for stop flag?
     while (I2C1->SR1 & I2C_CR1_STOP) {}
      // Temporary timing experiment
-    for (volatile uint32_t i = 0; i < 10000; ++i) {}
+    for (volatile uint32_t i = 0; i < 5; ++i) {}
 }
 
 void i2c1_write_byte(uint8_t byte) {

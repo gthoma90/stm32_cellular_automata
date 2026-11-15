@@ -75,3 +75,12 @@ void graphics_draw_line(uint16_t x, uint16_t y, const uint8_t *ptr, const uint16
         graphics_draw_pixel(x + i, y, on);
     }
 }
+
+void graphics_draw_scroll_line(uint16_t x, uint16_t y, const uint16_t len) {
+    for (uint16_t i = 0; i < len; ++i) {
+        uint16_t index = get_index(x + i, y + 1);
+        uint8_t mask = get_mask(y + 1);
+        bool on = ((framebuffer[index] & mask) != 0);
+        graphics_draw_pixel(x + i, y, on);
+    }
+}

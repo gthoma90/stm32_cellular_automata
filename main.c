@@ -3,12 +3,14 @@
 #include "graphics.h"
 #include "automata.h"
 #include "encoder.h"
+#include "systick.h"
 
 
 void draw_home_screen(void);
 void draw_ca_screen(void);
-uint8_t get_rule(uint16_t);
-void rule_to_string(void);
+void draw_scroll_screen(void);
+int16_t get_rule_increment(void);
+static void rule_to_string(void);
 static void advance_automaton(void);
 void reset_seed_row(void);
 
@@ -23,8 +25,10 @@ static uint8_t row_b[NUM_COLS];
 static uint8_t *curr = row_a;
 static uint8_t *next = row_b;
 
+static ButtonPress button;
 static uint8_t selected_rule;
 static uint8_t temp_rule;
+static int16_t reset_count;
 static char rule_str[4];
 
 
@@ -38,10 +42,11 @@ static void startup_delay(void)
 int main(void) {
 
     AppMode mode = MODE_HOME;
-    bool pressed = false;
-    bool was_pressed = false;
-    bool dirty = true;
     
+    bool dirty = true;
+    bool scrolling = false;
+   
+    systick_init();
     encoder_init();
     i2c1_init();
     startup_delay();
@@ -49,43 +54,78 @@ int main(void) {
     graphics_clear_frame();
     ssd1306_update(graphics_get_buffer());
 
+    selected_rule = 0;
+    reset_count = encoder_count();
+
+
     while(1) {
 
-        pressed = button_pressed();
-        if (pressed && !was_pressed) {
-            graphics_clear_frame();
-            dirty = true;
-            if (mode == MODE_HOME) {
-                mode = MODE_CA;
-            }
-            else {
-                encoder_clear_count(); 
-                mode = MODE_HOME;
-            }
-        }
-        was_pressed = pressed;
+        button = button_press();
 
         switch (mode) {
             case MODE_HOME:
-                temp_rule = get_rule(encoder_count());
-                if (temp_rule != selected_rule) {
-                    selected_rule = temp_rule;
-                    dirty = true;
-                }
-                if (dirty) {
-                    rule_to_string();
-                    draw_home_screen();
-                    ssd1306_update(graphics_get_buffer());
-                    dirty = false;
+                switch (button) {
+                    case BUTTON_NONE: {
+                        int16_t increment = get_rule_increment();
+                        if (increment) {
+                            selected_rule += increment;
+                            dirty = true;
+                        }
+                        if (dirty) {
+                            draw_home_screen();
+                            ssd1306_update(graphics_get_buffer());
+                            dirty = false;
+                        }
+                        break;
+                                      }
+                    case BUTTON_SINGLE:
+                        dirty = true;
+                        rule_to_string();
+                        mode = MODE_CA;
+                        break;
+                    case BUTTON_DOUBLE:
+                        dirty = true;
+                        rule_to_string();
+                        mode = MODE_CA;
+                        break;
                 }
                 break;
 
             case MODE_CA:
-                if (dirty) {
-                    rule_to_string();
-                    draw_ca_screen();
-                    ssd1306_update(graphics_get_buffer());
-                    dirty = false;
+                switch (button) {
+                    case BUTTON_NONE:
+                        if (dirty) {
+                            draw_ca_screen();
+                            ssd1306_update(graphics_get_buffer());
+                            dirty = false;
+                        }
+                        if (scrolling) {
+
+                            uint32_t start = systick_millis();
+
+                            draw_scroll_screen();
+                            ssd1306_update(graphics_get_buffer());
+
+                            volatile uint32_t scroll_frame_ms = systick_millis() - start;
+
+                            draw_scroll_screen();
+                            ssd1306_update(graphics_get_buffer());
+                        }
+                        break;
+                    case BUTTON_SINGLE:
+                        if (!scrolling) {
+                            scrolling = true;
+                        }
+                        else {
+                            scrolling = false;
+                        }
+                        break;
+                    case BUTTON_DOUBLE:
+                        dirty = true;
+                        reset_count = encoder_count();
+                        graphics_clear_frame();
+                        mode = MODE_HOME;
+                        break;
                 }
                 break;
         }
@@ -95,6 +135,7 @@ int main(void) {
 
 
 void draw_home_screen(void) {
+    rule_to_string();
     graphics_draw_text(32, 16, "CELLULAR");
     graphics_draw_text(32, 24, "AUTOMATA");
     graphics_draw_text(24, 40, "RULE : ");
@@ -112,6 +153,14 @@ void draw_ca_screen(void) {
     }
 }
 
+void draw_scroll_screen(void) {
+    for (uint16_t y = 16; y < DISP_HEIGHT - 1; ++y) {
+        graphics_draw_scroll_line(0, y, DISP_WIDTH);
+    }
+    advance_automaton();
+    graphics_draw_line(0, 63, curr, DISP_WIDTH);
+}
+
 static void advance_automaton(void)
 {
     automata_generate_row(curr, next, selected_rule); 
@@ -121,11 +170,23 @@ static void advance_automaton(void)
     next = temp;
 }
 
-uint8_t get_rule(uint16_t count) {
-    return (uint8_t)(count / 4); 
+int16_t get_rule_increment(void) {
+    int16_t count = encoder_count();
+    EncoderSpeed speed = encoder_speed();
+    int16_t delta = count - reset_count;
+    int16_t steps = delta / 4;
+    reset_count += steps * 4;
+    switch (speed) {
+        case ENCODER_SLOW:
+            return steps;
+        case ENCODER_FAST:
+            return (5 * steps);
+        default:
+            return steps;
+    } 
 }
 
-void rule_to_string(void) {
+static void rule_to_string(void) {
     rule_str[0] = '0' + selected_rule / 100;
     rule_str[1] = '0' + (selected_rule / 10) % 10;
     rule_str[2] = '0' + selected_rule % 10;

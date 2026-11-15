@@ -4,16 +4,16 @@
 
 #include <stdbool.h>
 
-typedef enum {
-    BUTTON_NONE,
-    BUTTON_SINGLE,
-    BUTTON_DOUBLE
-} ButtonPress;
 
 static bool prev_state = 1;
 static bool stable_state = 1;
 static uint32_t tick_one = 0;
 static uint32_t tick_two = 0;
+
+static uint32_t recent_tick = 0;
+static uint16_t recent_count = 0;
+static bool turning = false;
+static bool turning_fast = false;
 
 typedef enum {
     IDLE,
@@ -22,7 +22,7 @@ typedef enum {
     TWO_WAITING,
 } ButtonState;
 
-ButtonState state = IDLE;
+static ButtonState state = IDLE;
 
 
 void encoder_init(void) {
@@ -84,11 +84,12 @@ uint16_t encoder_count(void) {
     return TIM2->CNT;
 }
 
+
 void encoder_clear_count(void) {
     TIM2->CNT = 0; 
 }
 
-ButtonPress button(void) {
+ButtonPress button_press(void) {
     bool press = false;
     bool release = false;
     uint32_t tick_call = systick_millis();
@@ -146,4 +147,17 @@ ButtonPress button(void) {
             break;           
     }
     return BUTTON_NONE;
+}
+
+EncoderSpeed encoder_speed(void) {
+    uint32_t raw_encoder_tick = systick_millis();
+    uint16_t raw_encoder_count = encoder_count();
+    if (raw_encoder_count != recent_count) {
+        if (raw_encoder_tick - recent_tick < 100) {
+            return ENCODER_FAST;
+        }
+        recent_count = raw_encoder_count;
+        recent_tick = raw_encoder_tick;
+    }
+    return ENCODER_SLOW;
 }

@@ -9,7 +9,7 @@ CFLAGS += -DSTM32F103x6
 CFLAGS += -I$(CMSIS)/Include
 CFLAGS += -I$(CMSIS)/Device/ST/STM32F1xx/Include
 
-SRCS = startup.c main.c ssd1306.c automata.c graphics.c i2c1.c encoder.c
+SRCS = startup.c main.c ssd1306.c automata.c graphics.c i2c1.c encoder.c systick.c
 OBJS = $(SRCS:.c=.o)
 
 all: $(TARGET).bin $(TARGET).hex
