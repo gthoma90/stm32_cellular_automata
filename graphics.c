@@ -84,3 +84,19 @@ void graphics_draw_scroll_line(uint16_t x, uint16_t y, const uint16_t len) {
         graphics_draw_pixel(x + i, y, on);
     }
 }
+
+void graphics_scroll_frame(void) {
+    for (uint16_t i = 2; i < PAGE_COUNT; ++i) {
+        for (uint16_t j = 0; j < DISP_WIDTH; ++j) {
+            uint16_t index = (i * DISP_WIDTH + j);
+            if (i == 2) {
+                framebuffer[index] = framebuffer[index] >> 1;
+            }
+            else {
+                uint8_t page_shift = ((framebuffer[index] & 1) << 7);
+                framebuffer[index - DISP_WIDTH] |= page_shift;
+                framebuffer[index] = framebuffer[index] >> 1;
+            }
+        } 
+    }
+}

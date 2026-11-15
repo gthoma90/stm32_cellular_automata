@@ -18,6 +18,7 @@ void graphics_draw_text(uint16_t x, uint16_t y, const char *text);
 const uint8_t *graphics_get_buffer(void);
 void graphics_draw_line(uint16_t x, uint16_t y, const uint8_t *ptr, const uint16_t len);
 void graphics_draw_scroll_line(uint16_t x, uint16_t y, const uint16_t len);
+void graphics_scroll_frame(void);
 
 
 

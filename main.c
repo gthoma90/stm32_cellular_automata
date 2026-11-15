@@ -154,9 +154,7 @@ void draw_ca_screen(void) {
 }
 
 void draw_scroll_screen(void) {
-    for (uint16_t y = 16; y < DISP_HEIGHT - 1; ++y) {
-        graphics_draw_scroll_line(0, y, DISP_WIDTH);
-    }
+    graphics_scroll_frame();
     advance_automaton();
     graphics_draw_line(0, 63, curr, DISP_WIDTH);
 }
