@@ -1,10 +1,11 @@
 #include "ssd1306.h"
 #include "i2c1.h" 
-#include "graphics.h"
+#include "display_config.h"
 
 void ssd1306_command(const uint8_t *cmd, uint16_t len)
 {
     i2c1_start(SSD1306_ADDR);
+    // Co=0, D/C#=0: all remaining bytes in this transaction are commands/parameters.
     i2c1_write_byte(CTRL_CMD);
     for (uint16_t i = 0; i < len; ++i) {
         i2c1_write_byte(cmd[i]);
@@ -15,6 +16,7 @@ void ssd1306_command(const uint8_t *cmd, uint16_t len)
 void ssd1306_data(const uint8_t *data, uint16_t len)
 { 
     i2c1_start(SSD1306_ADDR);
+    // Co=0, D/C#=1: all remaining bytes in this transaction go to display RAM.
     i2c1_write_byte(CTRL_DATA);
     for (uint16_t i = 0; i < len; ++i) {
         i2c1_write_byte(data[i]);
@@ -25,6 +27,7 @@ void ssd1306_data(const uint8_t *data, uint16_t len)
   
 void ssd1306_init(void)
 {
+    // Configuration for the 128x64 panel with the internal charge pump enabled.
     const uint8_t init_cmds[] = {
         0xAE,        // Display OFF
 
@@ -65,6 +68,7 @@ void ssd1306_update(const uint8_t *buffer) {
         0xB0,        // PAGE 0
         0x00, 0x10   // COLUMN 0
     };
+    // Page mode requires selecting each page and resetting its column separately.
     for(uint8_t page = 0; page < PAGE_COUNT; ++page) {
         page_commands[0] = 0xB0 + page;
         ssd1306_command(page_commands, sizeof(page_commands));

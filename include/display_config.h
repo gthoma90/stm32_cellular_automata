@@ -1,0 +1,9 @@
+#ifndef DISPLAY_CONFIG_H
+#define DISPLAY_CONFIG_H
+
+#define DISP_WIDTH  128
+#define DISP_HEIGHT 64
+#define PAGE_COUNT  ((DISP_HEIGHT + 7) / 8)
+#define BUFFER_SIZE (DISP_WIDTH * PAGE_COUNT)
+
+#endif

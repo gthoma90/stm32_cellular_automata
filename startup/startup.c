@@ -1,10 +1,7 @@
-// Startup file
-// This include is part of the standard embedded library
-// And basically creates a guaranteed 32 bit length int
+// Minimal Cortex-M3 startup; section boundaries are supplied by stm32f103.ld.
 #include <stdint.h>
 
-// Extern basically saying this is defined elsewhere, dont complain
-// Linker sorts it out
+// These linker symbols represent addresses, not stored C variables.
 extern uint32_t _sdata, _edata, _sbss, _ebss;
 extern uint32_t _sidata;
 
@@ -12,7 +9,7 @@ int main(void);
 void systick_handler(void);
 
 void reset_handler(void) {
-    // Copy .data from flash to RAM
+    // Restore initialized globals from their flash load image before calling main.
     uint32_t *src = &_sidata;
     uint32_t *dst = &_sdata;
     while (dst < &_edata) {
@@ -27,6 +24,7 @@ void reset_handler(void) {
 
     main();
 
+    // There is no runtime to return to if main exits.
     while (1) {}
 }
 
@@ -34,6 +32,8 @@ void default_handler(void) {
     while(1) {}
 }
 
+// Hardware reads the initial stack pointer and reset address from the start of flash.
+// The stack top matches the 10 KiB RAM region; only vectors through TIM2 are listed.
 uint32_t *vector_table[] __attribute__((section(".isr_vector"))) = {
     (uint32_t *) 0x20002800,      // stack pointer
     (uint32_t *) reset_handler,   // reset

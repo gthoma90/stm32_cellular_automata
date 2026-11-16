@@ -4,6 +4,7 @@
 #include "automata.h"
 #include "encoder.h"
 #include "systick.h"
+#include "display_config.h"
 
 
 void draw_home_screen(void);
@@ -20,6 +21,7 @@ typedef enum {
 } AppMode;
 
 
+// Keep separate generations so each new cell reads only the previous row.
 static uint8_t row_a[NUM_COLS];
 static uint8_t row_b[NUM_COLS];
 static uint8_t *curr = row_a;
@@ -27,11 +29,11 @@ static uint8_t *next = row_b;
 
 static ButtonPress button;
 static uint8_t selected_rule;
-static uint8_t temp_rule;
 static int16_t reset_count;
 static char rule_str[4];
 
 
+// Allow the display to settle before initialization; this is not a calibrated delay.
 static void startup_delay(void)
 {
     for (volatile uint32_t i = 0; i < 600000u; ++i) {
@@ -43,6 +45,7 @@ int main(void) {
 
     AppMode mode = MODE_HOME;
     
+    // Redraw static screens only when their contents change.
     bool dirty = true;
     bool scrolling = false;
    
@@ -68,6 +71,7 @@ int main(void) {
                     case BUTTON_NONE: {
                         int16_t increment = get_rule_increment();
                         if (increment) {
+                            // Unsigned conversion wraps rule selection through 0..255.
                             selected_rule += increment;
                             dirty = true;
                         }
@@ -100,14 +104,6 @@ int main(void) {
                             dirty = false;
                         }
                         if (scrolling) {
-
-                            uint32_t start = systick_millis();
-
-                            draw_scroll_screen();
-                            ssd1306_update(graphics_get_buffer());
-
-                            volatile uint32_t scroll_frame_ms = systick_millis() - start;
-
                             draw_scroll_screen();
                             ssd1306_update(graphics_get_buffer());
                         }
@@ -122,6 +118,8 @@ int main(void) {
                         break;
                     case BUTTON_DOUBLE:
                         dirty = true;
+                        scrolling = false;
+                        // Ignore encoder movement made while viewing the automaton.
                         reset_count = encoder_count();
                         graphics_clear_frame();
                         mode = MODE_HOME;
@@ -146,6 +144,7 @@ void draw_ca_screen(void) {
     graphics_draw_text(0, 0, "RULE:");
     graphics_draw_text(0, 8, rule_str);
     reset_seed_row();
+    // Rows 0..15 hold the header; the remaining 48 rows show generations.
     graphics_draw_line(0, 16, curr, DISP_WIDTH);
     for (uint16_t y = 17; y < DISP_HEIGHT; ++y) {
         advance_automaton();
@@ -163,6 +162,7 @@ static void advance_automaton(void)
 {
     automata_generate_row(curr, next, selected_rule); 
 
+    // Reuse the old current row as the next output buffer without copying.
     uint8_t *temp = curr;
     curr = next;
     next = temp;
@@ -172,6 +172,7 @@ int16_t get_rule_increment(void) {
     int16_t count = encoder_count();
     EncoderSpeed speed = encoder_speed();
     int16_t delta = count - reset_count;
+    // The encoder produces four counts per detent; retain partial detents.
     int16_t steps = delta / 4;
     reset_count += steps * 4;
     switch (speed) {
@@ -195,6 +196,7 @@ void reset_seed_row(void) {
     for (uint8_t i = 0; i < DISP_WIDTH; ++i) {
         curr[i] = 0;
     }
+    // Start each rule from a single active cell at the center.
     curr[NUM_COLS / 2] = 1;
 }
 

@@ -1,7 +1,9 @@
 #include "graphics.h"
+#include "display_config.h"
 #include "font8x8_basic.h"
 
 
+// Each byte holds eight vertical pixels, with the top pixel in bit 0.
 static uint8_t framebuffer[BUFFER_SIZE];
 
 
@@ -40,6 +42,7 @@ void graphics_render_char(uint16_t x, uint16_t y, char c) {
     if (row >= 128)
         return;
 
+    // Font bytes describe horizontal rows; bit i selects the pixel in column i.
     for (uint8_t i = 0; i < 8; ++i) {
         for (uint8_t j = 0; j < 8; ++j) {
             uint8_t mask = 1u << i;
@@ -76,16 +79,8 @@ void graphics_draw_line(uint16_t x, uint16_t y, const uint8_t *ptr, const uint16
     }
 }
 
-void graphics_draw_scroll_line(uint16_t x, uint16_t y, const uint16_t len) {
-    for (uint16_t i = 0; i < len; ++i) {
-        uint16_t index = get_index(x + i, y + 1);
-        uint8_t mask = get_mask(y + 1);
-        bool on = ((framebuffer[index] & mask) != 0);
-        graphics_draw_pixel(x + i, y, on);
-    }
-}
-
 void graphics_scroll_frame(void) {
+    // Preserve the two header pages and scroll the automaton upward by one pixel.
     for (uint16_t i = 2; i < PAGE_COUNT; ++i) {
         for (uint16_t j = 0; j < DISP_WIDTH; ++j) {
             uint16_t index = (i * DISP_WIDTH + j);
@@ -93,6 +88,7 @@ void graphics_scroll_frame(void) {
                 framebuffer[index] = framebuffer[index] >> 1;
             }
             else {
+                // The preceding page is already shifted, leaving bit 7 free for this carry.
                 uint8_t page_shift = ((framebuffer[index] & 1) << 7);
                 framebuffer[index - DISP_WIDTH] |= page_shift;
                 framebuffer[index] = framebuffer[index] >> 1;
