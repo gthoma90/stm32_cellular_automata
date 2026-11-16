@@ -6,7 +6,7 @@ The project grew out of studying automata theory and an interest in how simple, 
 
 ## Demo
 
-*TODO: Add a photo or short GIF of the device running.*
+*TODO*
 
 ## Hardware
 
