@@ -6,7 +6,14 @@ The project grew out of studying automata theory and an interest in how simple, 
 
 ## Demo
 
-*TODO*
+<p align="center">
+  <img src="assets/oled-demo-optimized.gif" width="450">
+</p>
+
+<p align="center">
+  <img src="assets/rule30.jpeg" width="40%">
+  <img src="assets/rule45.jpeg" width="40%">
+</p>
 
 ## Hardware
 
@@ -56,9 +63,9 @@ The firmware consists of several components implemented for this project:
 
 ### Scrolling Bottleneck
 
-One of the more interesting problems was improving the display's scrolling performance. Initially, I suspected that I²C transmission time was limiting the update rate. I measured the time required to transfer the framebuffer, then increased the I²C clock speed. However, the visible scrolling speed improved much less than expected. Timing the framebuffer operations separately revealed that rendering was taking substantially longer than transmitting the data.
+One of the more interesting problems was improving the display’s scrolling performance. Initially, I suspected that I²C transmission time was limiting the update rate. I measured the time required to transfer the framebuffer, then increased the I²C clock speed from 100 kHz to approximately 381 kHz, reducing transfer time from 99 ms to 26 ms. However, the visible scrolling speed improved much less than expected. With a total scrolling frame time of 205 ms, further profiling revealed that rendering, rather than transmission, was the primary bottleneck.
 
-The initial scrolling implementation relied on repeatedly manipulating individual pixels. I replaced this with byte-level operations using bit shifts to move the framebuffer contents more efficiently. This was a useful lesson in measuring performance before deciding what to optimize: improving communication speed alone wasn't enough when most of the time was being spent preparing the data.
+The initial scrolling implementation relied on repeatedly manipulating individual pixels. I replaced this with byte-level operations using bit shifts to move the framebuffer contents more efficiently, reducing the total scrolling frame time from 205 ms to 36 ms — a 5.7× speedup. This was a useful lesson in measuring performance before deciding what to optimize: improving communication speed alone wasn’t enough when most of the time was being spent preparing the data.
 
 ### Framebuffer and Glyph Layout
 
